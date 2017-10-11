@@ -26,11 +26,12 @@ import Control.Monad
 import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Proxy
+import Data.Time 
 import Path
 import System.Exit
 import System.Hapistrano.Commands
 import System.Hapistrano.Types
-import System.Process
+import System.Process  
 
 -- | Run the 'Hapistrano' monad. The monad hosts 'exec' actions.
 
@@ -106,7 +107,7 @@ scp' src dest extraArgs = do
       hostPrefix =
         case sshHost <$> configSshOptions of
           Nothing -> ""
-          Just x -> x ++ ":"
+          Just x  -> x ++ ":"
       args = extraArgs ++ portArg ++ [src, hostPrefix ++ dest]
   void (exec' prog args (prog ++ " " ++ unwords args))
 
@@ -126,7 +127,11 @@ exec' prog args cmd = do
         case configSshOptions of
           Nothing              -> "localhost"
           Just SshOptions {..} -> sshHost ++ ":" ++ show sshPort
-  liftIO $ configPrint StdoutDest (putLine hostLabel ++ "$ " ++ cmd ++ "\n")
+      tStampFormat = "%T, %F (%Z)"
+  tStamp <- formatTime defaultTimeLocale tStampFormat <$> liftIO getZonedTime
+  liftIO $ configPrint StdoutDest (putLine hostLabel 
+                                        ++ "[" ++ tStamp ++ "] INFO -- : " 
+                                        ++ cmd ++ "\n")
   (exitCode, stdout', stderr') <- liftIO
     (readProcessWithExitCode prog args "")
   unless (null stdout') . liftIO $
